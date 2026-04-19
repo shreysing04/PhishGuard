@@ -65,7 +65,8 @@ async function loadHistory(page = 1, filter = 'all') {
         document.getElementById('totalCount').textContent = `${data.total} records`;
 
         if (!data.data || data.data.length === 0) {
-            body.innerHTML = '<tr><td colspan="6" class="empty-row">No records found</td></tr>';
+            const errorMsg = data.error ? `<br><small style="color: #ff4d4d;">Error: ${data.error}</small>` : '';
+            body.innerHTML = `<tr><td colspan="6" class="empty-row">No records found ${errorMsg}</td></tr>`;
             return;
         }
 

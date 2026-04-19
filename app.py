@@ -50,7 +50,8 @@ class MySQL:
                 user=self.app.config['MYSQL_USER'],
                 password=self.app.config['MYSQL_PASSWORD'],
                 database=self.app.config['MYSQL_DB'],
-                cursorclass=pymysql.cursors.DictCursor
+                cursorclass=pymysql.cursors.DictCursor,
+                autocommit=True
             )
         return self._conn
 
@@ -698,7 +699,8 @@ def api_history():
 
         return jsonify({'data': rows, 'total': total, 'page': page, 'per_page': per_page})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"[API ERROR] /api/history: {e}")
+        return jsonify({'error': str(e), 'data': [], 'total': 0}), 500
 
 
 @app.route('/api/stats')
