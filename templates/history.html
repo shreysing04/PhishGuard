@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}PhishGuard - Scan History{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h2 class="page-title">SCAN HISTORY</h2>
+    <p class="page-sub">All previously scanned URLs logged in MySQL</p>
+</section>
+
+<section class="history-section">
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all" onclick="filterHistory(this, 'all')">ALL</button>
+        <button class="filter-btn" data-filter="safe" onclick="filterHistory(this, 'safe')">✅ SAFE</button>
+        <button class="filter-btn" data-filter="phishing" onclick="filterHistory(this, 'phishing')">🚨 PHISHING</button>
+        <button class="filter-btn" data-filter="suspicious" onclick="filterHistory(this, 'suspicious')">⚠️ SUSPICIOUS</button>
+        <div class="filter-right">
+            <span id="totalCount" class="total-count">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>URL</th>
+                    <th>RESULT</th>
+                    <th>THREAT TYPE</th>
+                    <th>PLATFORM</th>
+                    <th>SCANNED AT</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+                <tr>
+                    <td colspan="6" class="loading-row">
+                        <div class="spinner"></div> Loading scan history...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let currentFilter = 'all';
+
+async function loadHistory(page = 1, filter = 'all') {
+    currentPage = page;
+    currentFilter = filter;
+    const body = document.getElementById('historyBody');
+    body.innerHTML = '<tr><td colspan="6" class="loading-row"><div class="spinner"></div> Loading...</td></tr>';
+
+    try {
+        const res = await fetch(`/api/history?page=${page}&per_page=20&filter=${filter}`);
+        const data = await res.json();
+
+        document.getElementById('totalCount').textContent = `${data.total} records`;
+
+        if (!data.data || data.data.length === 0) {
+            body.innerHTML = '<tr><td colspan="6" class="empty-row">No records found</td></tr>';
+            return;
+        }
+
+        body.innerHTML = data.data.map((row, i) => `
+            <tr class="result-row result-${row.result}">
+                <td class="row-id">${(page - 1) * 20 + i + 1}</td>
+                <td class="row-url" title="${row.url}">
+                    <a href="${row.url}" target="_blank" rel="noopener noreferrer">${truncateURL(row.url)}</a>
+                </td>
+                <td><span class="badge-result badge-${row.result}">${row.result.toUpperCase()}</span></td>
+                <td>${row.threat_type || '<span class="na">—</span>'}</td>
+                <td>${row.platform || '<span class="na">—</span>'}</td>
+                <td class="row-date">${row.scanned_at}</td>
+            </tr>
+        `).join('');
+
+        renderPagination(data.total, page);
+    } catch (e) {
+        body.innerHTML = '<tr><td colspan="6" class="error-row">⚠️ Failed to load history. Is the server running?</td></tr>';
+    }
+}
+
+function truncateURL(url) {
+    return url.length > 60 ? url.substring(0, 60) + '...' : url;
+}
+
+function filterHistory(btn, filter) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadHistory(1, filter);
+}
+
+function renderPagination(total, page) {
+    const pages = Math.ceil(total / 20);
+    const pg = document.getElementById('pagination');
+    if (pages <= 1) { pg.innerHTML = ''; return; }
+
+    let html = '';
+    if (page > 1) html += `<button onclick="loadHistory(${page - 1}, '${currentFilter}')">← PREV</button>`;
+    for (let i = Math.max(1, page - 2); i <= Math.min(pages, page + 2); i++) {
+        html += `<button class="${i === page ? 'pg-active' : ''}" onclick="loadHistory(${i}, '${currentFilter}')">${i}</button>`;
+    }
+    if (page < pages) html += `<button onclick="loadHistory(${page + 1}, '${currentFilter}')">NEXT →</button>`;
+    pg.innerHTML = html;
+}
+
+loadHistory();
+</script>
+{% endblock %}

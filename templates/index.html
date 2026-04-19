@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}PhishGuard - URL Scanner{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-bg">
+        <div class="grid-lines"></div>
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+    </div>
+
+    <div class="hero-content">
+        <div class="badge">THREAT DETECTION ENGINE v1.0</div>
+        <h1 class="hero-title">
+            <span class="title-line">PHISHING</span>
+            <span class="title-line accent">DETECTOR</span>
+        </h1>
+        <p class="hero-subtitle">
+            Scan any URL instantly using Google Safe Browsing API.<br>
+            Know before you click.
+        </p>
+
+        <!-- Scanner Input -->
+        <div class="scanner-card" id="scannerCard">
+            <div class="scanner-label">ENTER URL TO SCAN</div>
+            <div class="input-group">
+                <div class="input-icon">🔗</div>
+                <input
+                    type="text"
+                    id="urlInput"
+                    placeholder="https://example.com"
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+                <button id="scanBtn" onclick="scanURL()">
+                    <span id="btnText">SCAN NOW</span>
+                    <span id="btnLoader" class="btn-loader hidden">⟳</span>
+                </button>
+            </div>
+            <div class="scanner-hints">
+                <span>Try:</span>
+                <button class="hint-pill" onclick="fillURL('https://google.com')">google.com</button>
+                <button class="hint-pill" onclick="fillURL('http://paypal-secure-login.fake-phish.xyz')">suspicious URL</button>
+            </div>
+        </div>
+
+        <!-- Result Card -->
+        <div class="result-card hidden" id="resultCard">
+            <div class="result-header">
+                <div class="result-icon" id="resultIcon"></div>
+                <div class="result-label" id="resultLabel"></div>
+            </div>
+            <div class="result-url" id="resultURL"></div>
+            <div class="result-message" id="resultMessage"></div>
+            <div class="result-details" id="resultDetails"></div>
+            <div class="result-actions">
+                <button class="btn-secondary" onclick="resetScanner()">SCAN ANOTHER</button>
+                <a href="/history" class="btn-ghost">VIEW HISTORY →</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Strip -->
+<section class="features-strip">
+    <div class="feature-item">
+        <span class="feat-icon">🛡️</span>
+        <div>
+            <strong>Google Safe Browsing</strong>
+            <small>Real-time threat database</small>
+        </div>
+    </div>
+    <div class="feature-divider"></div>
+    <div class="feature-item">
+        <span class="feat-icon">⚡</span>
+        <div>
+            <strong>Instant Results</strong>
+            <small>Sub-second scanning</small>
+        </div>
+    </div>
+    <div class="feature-divider"></div>
+    <div class="feature-item">
+        <span class="feat-icon">📊</span>
+        <div>
+            <strong>Full History</strong>
+            <small>Every scan logged to MySQL</small>
+        </div>
+    </div>
+    <div class="feature-divider"></div>
+    <div class="feature-item">
+        <span class="feat-icon">🔍</span>
+        <div>
+            <strong>Threat Analysis</strong>
+            <small>Malware, phishing & more</small>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function fillURL(url) {
+    document.getElementById('urlInput').value = url;
+    document.getElementById('urlInput').focus();
+}
+
+document.getElementById('urlInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') scanURL();
+});
+</script>
+{% endblock %}

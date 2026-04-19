@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}PhishGuard - Dashboard{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <h2 class="page-title">THREAT DASHBOARD</h2>
+    <p class="page-sub">Real-time statistics from your MySQL database</p>
+</section>
+
+<section class="dashboard-section">
+    <!-- Stats Cards -->
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card stat-total">
+            <div class="stat-icon">📊</div>
+            <div class="stat-value" id="totalScans">—</div>
+            <div class="stat-label">TOTAL SCANS</div>
+        </div>
+        <div class="stat-card stat-safe">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value" id="safeCount">—</div>
+            <div class="stat-label">SAFE URLs</div>
+        </div>
+        <div class="stat-card stat-phishing">
+            <div class="stat-icon">🚨</div>
+            <div class="stat-value" id="phishingCount">—</div>
+            <div class="stat-label">PHISHING DETECTED</div>
+        </div>
+        <div class="stat-card stat-suspicious">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-value" id="suspiciousCount">—</div>
+            <div class="stat-label">SUSPICIOUS URLs</div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-card">
+        <div class="chart-title">SCAN ACTIVITY (LAST 7 DAYS)</div>
+        <div id="chartArea" class="chart-area">
+            <canvas id="activityChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Quick Scan -->
+    <div class="quick-scan-card">
+        <div class="qs-title">QUICK SCAN</div>
+        <div class="input-group">
+            <input type="text" id="dashUrlInput" placeholder="https://example.com" />
+            <button onclick="dashScan()">SCAN</button>
+        </div>
+        <div id="dashResult" class="dash-result hidden"></div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+async function loadStats() {
+    try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        const s = data.stats;
+
+        document.getElementById('totalScans').textContent = s.total_scans || 0;
+        document.getElementById('safeCount').textContent = s.safe_count || 0;
+        document.getElementById('phishingCount').textContent = s.phishing_count || 0;
+        document.getElementById('suspiciousCount').textContent = s.suspicious_count || 0;
+
+        renderChart(data.chart || []);
+    } catch (e) {
+        console.error('Stats load failed:', e);
+    }
+}
+
+function renderChart(chartData) {
+    const labels = chartData.reverse().map(d => d.stat_date);
+    const totals = chartData.map(d => d.total_scans);
+    const phishing = chartData.map(d => d.phishing_count);
+
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Total Scans',
+                    data: totals,
+                    backgroundColor: 'rgba(0, 255, 136, 0.3)',
+                    borderColor: '#00ff88',
+                    borderWidth: 2,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Phishing',
+                    data: phishing,
+                    backgroundColor: 'rgba(255, 50, 50, 0.4)',
+                    borderColor: '#ff3232',
+                    borderWidth: 2,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    labels: { color: '#aaa', font: { family: 'Space Mono' } }
+                }
+            },
+            scales: {
+                x: { ticks: { color: '#888' }, grid: { color: '#1a1a2e' } },
+                y: { ticks: { color: '#888' }, grid: { color: '#1a1a2e' } }
+            }
+        }
+    });
+}
+
+async function dashScan() {
+    const url = document.getElementById('dashUrlInput').value.trim();
+    if (!url) return;
+    const res = document.getElementById('dashResult');
+    res.className = 'dash-result';
+    res.textContent = '⟳ Scanning...';
+
+    try {
+        const r = await fetch('/scan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+        const data = await r.json();
+        const icons = { safe: '✅', phishing: '🚨', suspicious: '⚠️', error: '❌' };
+        res.textContent = `${icons[data.status] || '❓'} ${data.status.toUpperCase()}: ${data.message}`;
+        res.className = `dash-result result-${data.status}`;
+        loadStats();
+    } catch (e) {
+        res.textContent = '❌ Scan failed';
+        res.className = 'dash-result result-error';
+    }
+}
+
+document.getElementById('dashUrlInput').addEventListener('keypress', e => {
+    if (e.key === 'Enter') dashScan();
+});
+
+loadStats();
+</script>
+{% endblock %}
