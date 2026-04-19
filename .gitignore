@@ -7,3 +7,22 @@ __pycache__/
 .DS_Store
 instance/
 *.log
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Python distribution / packaging
+dist/
+build/
+*.egg-info/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+.installed.cfg
+*.egg
+MANIFEST
