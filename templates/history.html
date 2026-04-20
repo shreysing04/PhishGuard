@@ -50,67 +50,62 @@
 
 {% block extra_js %}
 <script>
-    let currentPage = 1;
-    let currentFilter = 'all';
+        let currentPage =     1;
+    let currentFilter =     'all';
 
-    async function loadHistory(page = 1, filter = 'all') {
-        currentPage = page;
-        currentFilter = filter;
-        const body = document.getElementById('historyBody');
-        const history = JSON.parse(localStorage.getItem('phishguard_history') || '[]');
-        
-        // Filter history
-        const filtered = filter === 'all' ? history : history.filter(item => item.result === filter);
-        
-        document.getElementById('totalCount').textContent = `${filtered.length} local records`;
+    async function loadHistory(page = 1, filter        all') {
+        curr        age = page;
+        curr        ilter = filter;
+        const body = document.getElem        yId('historyBody');
+        body.innerHTML = '<tr><td colspan="6" class="loading-row"><div class="spinner"></d        Loadin            ></tr>';
 
-        if (filtered.length === 0) {
-            body.innerHTML = '<tr><td colspan="6" class="empty-row">No history found in this browser. Scanned links will appear here.</td></tr>';
-            return;
-        }
+        try {
+            const res = await fetch(`/api/history?page=${pa            page=20&filter=${filter}`);
+                const data = await res.json();
 
-        // Pagination for local records (20 per page)
-        const start = (page - 1) * 20;
-        const end = start + 20;
-        const paginated = filtered.slice(start, end);
+            document.getElementById('totalCoun            Content = `${data.total} records`;
 
-        body.innerHTML = paginated.map((row, i) => `
+                        a.data || data.data.length === 0) {
+                const errorMsg = data.error ? `<br><small style="c                d;">Error: ${data.error}</small>` : '';
+                body.innerHTML = `<tr><td colspan="6" cla                w">No re            und            Msg}</td></tr>`;
+                return;
+            }
+
+            body.innerHTML = data.data.map((row, i) => `
             <tr class="result-row result-${row.result}">
-                <td class="row-id">${start + i + 1}</td>
+                <td class="row-id">${(page - 1) * 20 + i + 1}</td>
                 <td class="row-url" title="${row.url}">
                     <a href="${row.url}" target="_blank" rel="noopener noreferrer">${truncateURL(row.url)}</a>
                 </td>
                 <td><span class="badge-result badge-${row.result}">${row.result.toUpperCase()}</span></td>
                 <td>${row.threat_type || '<span class="na">—</span>'}</td>
                 <td>${row.platform || '<span class="na">—</span>'}</td>
-                <td class="row-date">${row.scanned_at}</td>
-            </tr>
-        `).join('');
-
-        renderPagination(filtered.length, page);
+                <td class="row-d            ow.scanned_at}</td>
+            </tr              `).join(                      renderPagination(data.total, page);
+        } catch (e) {
+            body.innerHTML = '<tr><td colspan="6"         s=    "er    ror-row">⚠️ Failed to load h        ry. Is the server running?</td></tr>';
+        }
     }
 
-    function truncateURL(url) {
-        return url.length > 60 ? url.substring(0, 60) + '...' : url;
+    f    unc    tion truncateURL(url) {
+        return        .length > 60 ? url.substring(0, 60) + '...' : url;
     }
 
-    function filterHistory(btn, filter) {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        loadHistory(1, filter);
+    function filterHistory(         filter) {
+        document.q        SelectorAll('.filter-btn    ').    forEach(b => b.classList.remove('active')               btn.classList.add('active');
+            loadHistory(1, filter);
     }
 
-    function renderPagination(total, page) {
-        const pages = Math.ceil(total / 20);
-        const pg = document.getElementById('pagination');
-        if (pages <= 1) { pg.innerHTML = ''; return; }
+    function ren        agination(total, page) {
+        const pages = M        ceil(total / 20               const pg = document.getElementById('pagination');
+        if (pages <= 1) { pg.innerHTML = ''; re        ; }
 
         let html = '';
-        if (page > 1) html += `<button onclick="loadHistory(${page - 1}, '${currentFilter}')">← PREV</button>`;
-        for (let i = Math.max(1, page - 2); i <= Math.min(pages, page + 2); i++) {
-            html += `<button class="${i === page ? 'pg-active' : ''}" onclick="loadHistory(${i}, '${currentFilter}')">${i}</button>`;
+        if (page > 1) html += `<button onclick=            tory(${page - 1}, '${currentFilter}')">← PREV</button>`;
+        for (let i = Math.max(1, page - 2); i <= Math.min(pages,          +         i++) {
+            html += `<button class="${i === page ? 'pg-active' : ''}" onclick="loadHistory(${i}, '${        entFilter}')">${i}</b    utt    on>`;
         }
-        if (page < pages) html += `<button onclick="loadHistory(${page + 1}, '${currentFilter}')">NEXT →</button>`;
+ge < pages) html += `<button onclick="loadHistory(${page + 1}, '${currentFilter}')">NEXT →</button>`;
         pg.innerHTML = html;
     }
 
