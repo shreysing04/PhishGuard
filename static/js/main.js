@@ -30,6 +30,7 @@ async function scanURL() {
         });
 
         const data = await res.json();
+        saveToLocalStorage(data);
         renderResult(data, resultCard, scannerCard);
     } catch (err) {
         renderResult({
@@ -118,10 +119,33 @@ function resetScanner() {
 
     if (resultCard) resultCard.classList.add('hidden');
     if (scannerCard) scannerCard.classList.remove('hidden');
-    if (input) {
-        input.value = '';
-        input.focus();
+    const input = document.getElementById('urlInput');
+    if (input) input.focus();
+}
+
+function saveToLocalStorage(data) {
+    if (!data || data.status === 'error') return;
+    
+    let history = JSON.parse(localStorage.getItem('phishguard_history') || '[]');
+    
+    const newEntry = {
+        url: data.url,
+        result: data.status,
+        threat_type: data.threat_type || 'N/A',
+        platform: data.platform || 'N/A',
+        scanned_at: new Date().toLocaleString(),
+        score: data.heuristic ? data.heuristic.heuristic_score : 0
+    };
+    
+    // Add to start, avoid duplicates if same URL scanned twice in a row
+    if (history.length > 0 && history[0].url === newEntry.url) {
+        history[0] = newEntry; // update timestamp
+    } else {
+        history.unshift(newEntry);
     }
+    
+    if (history.length > 50) history = history.slice(0, 50);
+    localStorage.setItem('phishguard_history', JSON.stringify(history));
 }
 
 function shakeInput(el) {

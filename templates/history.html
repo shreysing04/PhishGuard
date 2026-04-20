@@ -56,37 +56,37 @@ async function loadHistory(page = 1, filter = 'all') {
     currentPage = page;
     currentFilter = filter;
     const body = document.getElementById('historyBody');
-    body.innerHTML = '<tr><td colspan="6" class="loading-row"><div class="spinner"></div> Loading...</td></tr>';
+    const history = JSON.parse(localStorage.getItem('phishguard_history') || '[]');
+    
+    // Filter history
+    const filtered = filter === 'all' ? history : history.filter(item => item.result === filter);
+    
+    document.getElementById('totalCount').textContent = `${filtered.length} local records`;
 
-    try {
-        const res = await fetch(`/api/history?page=${page}&per_page=20&filter=${filter}`);
-        const data = await res.json();
-
-        document.getElementById('totalCount').textContent = `${data.total} records`;
-
-        if (!data.data || data.data.length === 0) {
-            const errorMsg = data.error ? `<br><small style="color: #ff4d4d;">Error: ${data.error}</small>` : '';
-            body.innerHTML = `<tr><td colspan="6" class="empty-row">No records found ${errorMsg}</td></tr>`;
-            return;
-        }
-
-        body.innerHTML = data.data.map((row, i) => `
-            <tr class="result-row result-${row.result}">
-                <td class="row-id">${(page - 1) * 20 + i + 1}</td>
-                <td class="row-url" title="${row.url}">
-                    <a href="${row.url}" target="_blank" rel="noopener noreferrer">${truncateURL(row.url)}</a>
-                </td>
-                <td><span class="badge-result badge-${row.result}">${row.result.toUpperCase()}</span></td>
-                <td>${row.threat_type || '<span class="na">—</span>'}</td>
-                <td>${row.platform || '<span class="na">—</span>'}</td>
-                <td class="row-date">${row.scanned_at}</td>
-            </tr>
-        `).join('');
-
-        renderPagination(data.total, page);
-    } catch (e) {
-        body.innerHTML = '<tr><td colspan="6" class="error-row">⚠️ Failed to load history. Is the server running?</td></tr>';
+    if (filtered.length === 0) {
+        body.innerHTML = '<tr><td colspan="6" class="empty-row">No history found in this browser. Scanned links will appear here.</td></tr>';
+        return;
     }
+
+    // Pagination for local records (20 per page)
+    const start = (page - 1) * 20;
+    const end = start + 20;
+    const paginated = filtered.slice(start, end);
+
+    body.innerHTML = paginated.map((row, i) => `
+        <tr class="result-row result-${row.result}">
+            <td class="row-id">${start + i + 1}</td>
+            <td class="row-url" title="${row.url}">
+                <a href="${row.url}" target="_blank" rel="noopener noreferrer">${truncateURL(row.url)}</a>
+            </td>
+            <td><span class="badge-result badge-${row.result}">${row.result.toUpperCase()}</span></td>
+            <td>${row.threat_type || '<span class="na">—</span>'}</td>
+            <td>${row.platform || '<span class="na">—</span>'}</td>
+            <td class="row-date">${row.scanned_at}</td>
+        </tr>
+    `).join('');
+
+    renderPagination(filtered.length, page);
 }
 
 function truncateURL(url) {
